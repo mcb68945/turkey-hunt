@@ -11,6 +11,8 @@ const SECRET = "gobble-gobble-2026";
 const SHORT_WORD_KIDS = ["Jonas", "Isla"];
 // Players who get long, harder words (7+ letters).
 const LONG_WORD_KIDS = ["Chris", "Jordan", "Noelle", "Nolan"];
+// Players who get a single letter, a single digit, or a two-letter word.
+const TINY_WORD_KIDS = ["Silas", "Zane"];
 
 // Number of hidden tags.
 const TAG_COUNT = 25;
@@ -52,6 +54,10 @@ playground quarterback rainstorm rollercoaster sandcastle scorpion seahorse snow
 stegosaurus tangerine tarantula thanksgiving toothbrush treehouse tumbleweed volleyball warthog wishbone
 wolverine xylophone cornucopia drumstick pilgrim mashedpotato applecider pecanpie hotchocolate wrapping`;
 
+// No I or O (look like 1 and 0).
+const TINY_RAW = `A B C D E F G H J K L M N P Q R S T U V W X Y Z 1 2 3 4 5 6 7 8 9
+UP GO HI NO ON OK MA PA AM AT BE DO HE IF IN IS IT ME MY OR SO TO US WE BY`;
+
 // ---------- word + token logic (shared by all pages) ----------
 function hash32(str) {
   let h = 2166136261 >>> 0;
@@ -67,17 +73,18 @@ function mulberry32(a) {
   };
 }
 function wordPool(raw, salt, exclude) {
-  const list = [...new Set(raw.split(/\s+/).map(w => w.trim().toUpperCase()).filter(w => /^[A-Z]+$/.test(w) && !exclude.has(w)))];
+  const list = [...new Set(raw.split(/\s+/).map(w => w.trim().toUpperCase()).filter(w => /^[A-Z0-9]+$/.test(w) && !exclude.has(w)))];
   const rand = mulberry32(hash32(SECRET + salt));
   for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
   return list;
 }
+const TINY_WORDS = wordPool(TINY_RAW, "|tiny", new Set());
 const SHORT_WORDS = wordPool(SHORT_RAW, "|short", new Set());
 const LONG_WORDS = wordPool(LONG_RAW, "|long", new Set(SHORT_WORDS)).filter(w => w.length >= 7);
 const WORDS = wordPool(WORDS_RAW, "|words", new Set([...SHORT_WORDS, ...LONG_WORDS]));
 const idxs = names => new Set(names.map(n => NAMES.indexOf(n)).filter(i => i >= 0));
-const SHORT_SET = idxs(SHORT_WORD_KIDS), LONG_SET = idxs(LONG_WORD_KIDS);
-const poolOf = i => SHORT_SET.has(i) ? SHORT_WORDS : LONG_SET.has(i) ? LONG_WORDS : WORDS;
+const SHORT_SET = idxs(SHORT_WORD_KIDS), LONG_SET = idxs(LONG_WORD_KIDS), TINY_SET = idxs(TINY_WORD_KIDS);
+const poolOf = i => TINY_SET.has(i) ? TINY_WORDS : SHORT_SET.has(i) ? SHORT_WORDS : LONG_SET.has(i) ? LONG_WORDS : WORDS;
 // Each kid's slot within its own pool.
 const SLOT = (() => { const c = new Map(); return NAMES.map((_, i) => { const p = poolOf(i), n = c.get(p) || 0; c.set(p, n + 1); return n; }); })();
 NAMES.forEach((n, i) => { if ((SLOT[i] + 1) * TAG_COUNT > poolOf(i).length) throw new Error("Not enough words for " + n); });
