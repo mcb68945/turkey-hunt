@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turkey Hunt</title>
+<style>
+  :root { --bg:#1b120c; --card:#2a1c12; --ink:#fff4e6; --muted:#c9a98a; --accent:#ff9a3c; --good:#7ddc6f; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; display:flex; justify-content:center; }
+  main { width:100%; max-width:480px; padding:24px 16px 40px; text-align:center; }
+  h1 { font-size:1.4rem; margin:0 0 4px; color:var(--accent); letter-spacing:.04em; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  .names { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  button { font:inherit; border:0; border-radius:14px; padding:18px 10px; background:var(--card); color:var(--ink);
+           font-size:1.25rem; font-weight:700; cursor:pointer; }
+  button:active { transform:scale(.97); }
+  .tag { font-size:1.1rem; color:var(--muted); margin-top:16px; }
+  .word { font-size:clamp(3rem, 16vw, 5rem); font-weight:900; letter-spacing:.06em; color:var(--good);
+          margin:8px 0 16px; word-break:break-all; }
+  .who { font-size:1.3rem; }
+  .hint { color:var(--muted); font-size:1.05rem; }
+  .small { margin-top:40px; background:none; color:var(--muted); font-size:.9rem; padding:8px; text-decoration:underline; }
+  .err { color:#ff8a7a; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script src="config.js"></script>
+<script>
+const app = document.getElementById("app");
+const params = new URLSearchParams(location.search);
+const tag = params.has("t") ? tagFromToken(params.get("t")) : null;
+const KEY = "turkeyhunt_kid_" + hash32(SECRET);
+
+function currentKid() {
+  const v = store(KEY);
+  const i = v === null ? -1 : parseInt(v, 10);
+  return i >= 0 && i < NAMES.length ? i : null;
+}
+
+function el(html) { app.innerHTML = html; }
+
+function showPicker(then) {
+  el(`<h1>🦃 TURKEY HUNT</h1><p class="sub">Who are you? Tap your name.</p><div class="names"></div>`);
+  const box = app.querySelector(".names");
+  NAMES.forEach((n, i) => {
+    const b = document.createElement("button");
+    b.textContent = n;
+    b.onclick = () => {
+      if (!confirm("Are you " + n + "?")) return;
+      if (store(KEY, String(i)) === null) {
+        el(`<h1>🦃 TURKEY HUNT</h1><p class="err">This browser can't remember your name (private mode?). Ask a grown-up for help.</p>`);
+        return;
+      }
+      then();
+    };
+    box.appendChild(b);
+  });
+}
+
+function changeKid() {
+  const pin = prompt("Grown-up PIN to change player:");
+  if (pin !== HOST_PIN) { if (pin !== null) alert("Wrong PIN"); return; }
+  showPicker(render);
+}
+
+function render() {
+  const kid = currentKid();
+  if (kid === null) { showPicker(render); return; }
+  const name = NAMES[kid];
+  if (params.has("t") && tag === null) {
+    el(`<h1>🦃 TURKEY HUNT</h1><p class="err">Hmm, that code didn't work. Try scanning again.</p>`);
+    return;
+  }
+  if (tag === null) {
+    el(`<h1>🦃 TURKEY HUNT</h1>
+        <p class="who">You're <b>${name}</b>! ✅</p>
+        <p class="hint">Now go find the codes. Scan each one, then type your secret word at the TV.</p>
+        <button class="small" id="chg">Not ${name}?</button>`);
+  } else {
+    el(`<h1>🦃 TURKEY HUNT</h1>
+        <div class="tag">Tag ${tag} · for <b>${name}</b></div>
+        <div class="word">${wordFor(kid, tag)}</div>
+        <p class="hint">Run to the TV and type it in! 🤫 Keep it secret.</p>
+        <button class="small" id="chg">Not ${name}?</button>`);
+  }
+  document.getElementById("chg").onclick = changeKid;
+}
+render();
+</script>
+</body>
+</html>

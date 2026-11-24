@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turkey Hunt Terminal</title>
+<style>
+  :root { --bg:#020a03; --g:#39ff6a; --dim:#1f8f3c; --amber:#ffb347; --red:#ff5c5c; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--g);
+              font-family: "Courier New", ui-monospace, Menlo, monospace; overflow:hidden; }
+  body::after { content:""; position:fixed; inset:0; pointer-events:none;
+                background:repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 2px, transparent 2px 4px); }
+  .wrap { display:grid; grid-template-columns: 1.1fr 1fr; gap:3vw; height:100%; padding:3vh 3vw; }
+  h1 { margin:0 0 2vh; font-size:3.2vw; text-shadow:0 0 12px var(--g); letter-spacing:.1em; }
+  .term { display:flex; flex-direction:column; min-height:0; }
+  .log { flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
+         font-size:1.9vw; line-height:1.45; }
+  .log div { white-space:pre-wrap; text-shadow:0 0 6px currentColor; }
+  .ok { color:var(--g); } .bad { color:var(--red); } .warn { color:var(--amber); } .sys { color:var(--dim); }
+  .prompt { display:flex; align-items:center; font-size:2.6vw; margin-top:1.5vh; text-shadow:0 0 10px var(--g); }
+  .prompt span { margin-right:1vw; }
+  input { flex:1; background:transparent; border:0; outline:0; color:var(--g); font:inherit;
+          text-transform:uppercase; caret-color:var(--g); text-shadow:inherit; }
+  .board { display:flex; flex-direction:column; min-height:0; }
+  .row { display:grid; grid-template-columns: 2.2vw 10vw 1fr 5.5vw; align-items:center; gap:1vw;
+         font-size:2vw; margin:.6vh 0; }
+  .bar { height:2.4vh; border:1px solid var(--dim); position:relative; }
+  .fill { position:absolute; inset:0 auto 0 0; background:var(--g); box-shadow:0 0 10px var(--g); transition:width .6s; }
+  .row.lead .name { color:var(--amber); text-shadow:0 0 10px var(--amber); }
+  .row.done .fill { background:var(--amber); box-shadow:0 0 14px var(--amber); }
+  .count { text-align:right; }
+  .banner { position:fixed; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column;
+            background:rgba(0,10,0,.9); z-index:5; text-align:center; }
+  .banner.show { display:flex; animation:flash .5s steps(2) 6; }
+  .banner .big { font-size:8vw; color:var(--amber); text-shadow:0 0 30px var(--amber); }
+  .banner .msg { font-size:2.5vw; margin-top:2vh; }
+  @keyframes flash { 50% { opacity:.35; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="term">
+    <h1>&gt; TURKEY_HUNT.EXE</h1>
+    <div class="log" id="log"></div>
+    <div class="prompt"><span>&gt;</span><input id="in" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" autofocus></div>
+  </section>
+  <section class="board">
+    <h1>SCOREBOARD</h1>
+    <div id="rows"></div>
+  </section>
+</div>
+<div class="banner" id="banner"><div class="big" id="bannerName"></div><div class="msg" id="bannerMsg"></div></div>
+
+<script src="config.js"></script>
+<script>
+const LOOKUP = buildLookup();
+const SKEY = "turkeyhunt_tv_" + hash32(SECRET);
+let state = { found: NAMES.map(() => []), winners: [] };
+try { const s = JSON.parse(store(SKEY) || "null"); if (s && s.found && s.found.length === NAMES.length) state = s; } catch (e) {}
+function save() { store(SKEY, JSON.stringify(state)); }
+
+const logEl = document.getElementById("log"), input = document.getElementById("in");
+function log(text, cls = "sys") {
+  const d = document.createElement("div"); d.className = cls; d.textContent = text; logEl.appendChild(d);
+  while (logEl.children.length > 40) logEl.removeChild(logEl.firstChild);
+}
+
+function renderBoard() {
+  const order = NAMES.map((n, i) => ({ n, i, c: state.found[i].length })).sort((a, b) => b.c - a.c || a.n.localeCompare(b.n));
+  const top = order[0].c;
+  document.getElementById("rows").innerHTML = order.map((r, rank) => `
+    <div class="row ${r.c === TAG_COUNT ? "done" : ""} ${r.c === top && top > 0 ? "lead" : ""}">
+      <div>${rank + 1}</div><div class="name">${r.n.toUpperCase()}</div>
+      <div class="bar"><div class="fill" style="width:${r.c / TAG_COUNT * 100}%"></div></div>
+      <div class="count">${r.c}/${TAG_COUNT}</div>
+    </div>`).join("");
+}
+
+function banner(name, msg) {
+  document.getElementById("bannerName").textContent = name;
+  document.getElementById("bannerMsg").textContent = msg;
+  const b = document.getElementById("banner"); b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
+  setTimeout(() => b.classList.remove("show"), 6000);
+}
+
+let pendingReset = false;
+function handle(raw) {
+  const cmd = raw.trim().toUpperCase().replace(/[^A-Z0-9 ]/g, "");
+  if (!cmd) return;
+  log("> " + cmd, "sys");
+  if (pendingReset) {
+    pendingReset = false;
+    if (cmd === HOST_PIN) { state = { found: NAMES.map(() => []), winners: [] }; save(); renderBoard(); log("ALL SCORES WIPED. NEW GAME.", "warn"); }
+    else log("RESET CANCELLED.", "sys");
+    return;
+  }
+  if (cmd === "HELP") { log("TYPE YOUR SECRET WORD AND PRESS ENTER.", "sys"); return; }
+  if (cmd === "RESET") { pendingReset = true; log("ENTER HOST PIN TO WIPE ALL SCORES:", "warn"); return; }
+  const hit = LOOKUP.get(cmd.replace(/ /g, ""));
+  if (!hit) { log("✗ ACCESS DENIED", "bad"); return; }
+  const name = NAMES[hit.kid].toUpperCase(), list = state.found[hit.kid];
+  if (list.includes(hit.tag)) { log(`↺ ${name} ALREADY HAS TAG ${hit.tag}. ${list.length}/${TAG_COUNT}`, "warn"); return; }
+  list.push(hit.tag); save(); renderBoard();
+  log(`✓ ${name} FOUND TAG ${hit.tag} — ${list.length}/${TAG_COUNT}`, "ok");
+  if (list.length === TAG_COUNT) {
+    state.winners.push(hit.kid); save();
+    const place = state.winners.length;
+    const label = place === 1 ? "WINS!!!" : `FINISHED #${place}!`;
+    log(`★★★ ${name} ${label} ★★★`, "warn");
+    banner(name + " " + label, place === 1 ? "ALL 25 TAGS FOUND" : "ALL 25 TAGS FOUND");
+  }
+}
+
+input.addEventListener("keydown", e => { if (e.key === "Enter") { handle(input.value); input.value = ""; } });
+document.addEventListener("click", () => input.focus());
+setInterval(() => { if (document.activeElement !== input) input.focus(); }, 1000);
+
+log("BOOTING TURKEY HUNT v1.0 ...", "sys");
+log(`${NAMES.length} HUNTERS · ${TAG_COUNT} TAGS · FIRST TO ${TAG_COUNT} WINS`, "sys");
+log("TYPE YOUR SECRET WORD AND PRESS ENTER.", "ok");
+renderBoard();
+</script>
+</body>
+</html>
