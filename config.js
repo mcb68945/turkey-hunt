@@ -1,7 +1,7 @@
 // ===== EDIT THESE =====
 // Player names, in a fixed order. Changing names or order changes everyone's words,
 // so finalize this BEFORE printing the QR codes.
-const NAMES = ["Jordan", "Jonas", "Noelle", "Nolan", "Isla", "Chris", "Scarlet", "Amelia", "Zane", "Silas", "Baby Zane"];
+const NAMES = ["Jordan", "Jonas", "Noelle", "Nolan", "Isla", "Chris", "Scarlet", "Amelia", "Zane", "Silas", "Baby Sal"];
 
 // Secret key. Change it to anything; it scrambles all the words and tag links.
 // Changing it after printing breaks the printed codes.
