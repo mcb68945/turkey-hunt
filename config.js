@@ -9,6 +9,8 @@ const SECRET = "gobble-gobble-2026";
 
 // Players who get short, easy words (3-4 letters).
 const SHORT_WORD_KIDS = ["Jonas", "Isla"];
+// Players who get long, harder words (7+ letters).
+const LONG_WORD_KIDS = ["Chris", "Jordan", "Noelle", "Nolan"];
 
 // Number of hidden tags.
 const TAG_COUNT = 25;
@@ -39,6 +41,17 @@ const SHORT_RAW = `cat dog pig cow hen bug bee fox ant bat yak emu ape cub pup s
 boat ship cake bun corn pea bean nut toy ball kite drum bell box cup mug pot pan fan bed rug map pen red blue
 pink gold tree leaf rose frog duck fish bear lion deer goat seal crab toad worm sock shoe fork ring snow rain`;
 
+const LONG_RAW = `avalanche blueberry butterfly caterpillar chocolate crocodile dinosaur elephant fireworks flamingo
+gingerbread grasshopper hamburger helicopter jellyfish kangaroo lemonade marshmallow motorcycle mushroom nutcracker
+octopus pineapple porcupine raspberry rattlesnake scarecrow skateboard snowflake spaghetti starfish strawberry
+submarine sunflower telescope thunderstorm tornado trampoline triceratops umbrella waterfall watermelon woodpecker
+alligator astronaut backpack basketball blizzard bulldozer campfire cardinal cheetah chipmunk cinnamon cranberry
+dragonfly earthquake firetruck football gorilla hedgehog hurricane iceberg jackrabbit keyboard lighthouse lollipop
+mammoth meatball mermaid microphone moonlight notebook ostrich pancake panther parachute peppermint pinecone
+playground quarterback rainstorm rollercoaster sandcastle scorpion seahorse snowman sparkler spaceship squirrel
+stegosaurus tangerine tarantula thanksgiving toothbrush treehouse tumbleweed volleyball warthog wishbone
+wolverine xylophone cornucopia drumstick pilgrim mashedpotato applecider pecanpie hotchocolate wrapping`;
+
 // ---------- word + token logic (shared by all pages) ----------
 function hash32(str) {
   let h = 2166136261 >>> 0;
@@ -60,17 +73,17 @@ function wordPool(raw, salt, exclude) {
   return list;
 }
 const SHORT_WORDS = wordPool(SHORT_RAW, "|short", new Set());
-const WORDS = wordPool(WORDS_RAW, "|words", new Set(SHORT_WORDS));
-const SHORT_SET = new Set(SHORT_WORD_KIDS.map(n => NAMES.indexOf(n)).filter(i => i >= 0));
+const LONG_WORDS = wordPool(LONG_RAW, "|long", new Set(SHORT_WORDS)).filter(w => w.length >= 7);
+const WORDS = wordPool(WORDS_RAW, "|words", new Set([...SHORT_WORDS, ...LONG_WORDS]));
+const idxs = names => new Set(names.map(n => NAMES.indexOf(n)).filter(i => i >= 0));
+const SHORT_SET = idxs(SHORT_WORD_KIDS), LONG_SET = idxs(LONG_WORD_KIDS);
+const poolOf = i => SHORT_SET.has(i) ? SHORT_WORDS : LONG_SET.has(i) ? LONG_WORDS : WORDS;
 // Each kid's slot within its own pool.
-const SLOT = (() => { let s = 0, l = 0; return NAMES.map((_, i) => SHORT_SET.has(i) ? s++ : l++); })();
-if (SHORT_WORDS.length < SHORT_SET.size * TAG_COUNT || WORDS.length < (NAMES.length - SHORT_SET.size) * TAG_COUNT) {
-  throw new Error("Not enough words for " + NAMES.length + " players");
-}
+const SLOT = (() => { const c = new Map(); return NAMES.map((_, i) => { const p = poolOf(i), n = c.get(p) || 0; c.set(p, n + 1); return n; }); })();
+NAMES.forEach((n, i) => { if ((SLOT[i] + 1) * TAG_COUNT > poolOf(i).length) throw new Error("Not enough words for " + n); });
 // Each (kid, tag) pair gets its own word; no two pairs share a word.
 function wordFor(kidIndex, tag) {
-  const pool = SHORT_SET.has(kidIndex) ? SHORT_WORDS : WORDS;
-  return pool[SLOT[kidIndex] * TAG_COUNT + (tag - 1)];
+  return poolOf(kidIndex)[SLOT[kidIndex] * TAG_COUNT + (tag - 1)];
 }
 // Opaque per-tag link token so kids can't edit the URL to jump to another tag.
 function tokenFor(tag) { return hash32(SECRET + "|tag|" + tag).toString(36).padStart(6, "0").slice(0, 6); }
