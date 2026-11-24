@@ -12,13 +12,13 @@
   .signin h1 { font-size:42px; margin:0 0 8px; }
   .signin p { font-size:20px; margin:0 0 24px; }
   .signin .qr { display:inline-block; }
-  .grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:18px 12px; }
+  .grid { page-break-after:always; break-after:page; display:grid; grid-template-columns:repeat(4, 1fr); gap:18px 12px; }
   .cell { text-align:center; break-inside:avoid; border:1px dashed #bbb; padding:8px 4px 4px; }
   .cell .qr { display:inline-block; }
   .cell small { display:block; font-size:11px; color:#666; margin-top:4px; }
   table { border-collapse:collapse; width:100%; margin-top:8px; }
   td { border:1px solid #ccc; padding:6px 8px; font-size:13px; } td:first-child { width:60px; }
-  .list { page-break-before:always; }
+  .list { }
   @media print { .noprint { display:none; } body { margin:0.4in; } }
 </style>
 </head>
@@ -35,7 +35,7 @@
   <div class="qr" id="signinQR"></div>
 </div>
 
-<div class="grid" id="grid"></div>
+<div id="grids"></div>
 
 <div class="list">
   <h2>Hiding spots (keep this, don't show the kids)</h2>
@@ -47,8 +47,11 @@
 const base = location.href.replace(/[^/]*(\?.*)?(#.*)?$/, "") + "index.html";
 document.getElementById("base").textContent = "Codes point to: " + base;
 new QRCode(document.getElementById("signinQR"), { text: base, width: 320, height: 320, correctLevel: QRCode.CorrectLevel.M });
-const grid = document.getElementById("grid"), list = document.getElementById("list");
+const grids = document.getElementById("grids"), list = document.getElementById("list");
+const PER_PAGE = 20; // 4 x 5 fits a letter page, so no code gets split across a page break
+let grid;
 for (let t = 1; t <= TAG_COUNT; t++) {
+  if ((t - 1) % PER_PAGE === 0) { grid = document.createElement("div"); grid.className = "grid"; grids.appendChild(grid); }
   const cell = document.createElement("div"); cell.className = "cell";
   const q = document.createElement("div"); q.className = "qr"; cell.appendChild(q);
   const s = document.createElement("small"); s.textContent = "#" + t; cell.appendChild(s);
