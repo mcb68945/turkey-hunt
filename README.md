@@ -8,7 +8,7 @@ QR scavenger hunt: first to find all 25 tags wins, or whoever has the most when 
 - `config.js` — player names, secret key, host PIN.
 
 ## Party flow
-0. Host types `START` (default 25 min, set in `config.js`) or `START 20` at the TV to begin. Words typed before that are rejected.
+0. Host types `START` (default 25 min, set in `config.js`) or `START 20` at the TV to begin. Words typed before that are rejected. START also shows a 3-digit GO code; each kid types it on their phone once, and their words only appear after that (words change every game, so scanning early is useless). After a RESET + START, kids tap "New game code" on their phone.
 1. Each kid scans the big sign-in code and taps their name (once per device).
 2. Kids hunt. Scan a tag, get a word, run to the TV, type it, press Enter.
 3. Terminal commands: `HELP`, `RESET` (then the host PIN) to wipe scores.

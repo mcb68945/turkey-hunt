@@ -106,9 +106,24 @@ const poolOf = i => HARD_SET.has(i) ? HARD_WORDS : TINY_SET.has(i) ? TINY_WORDS 
 // Each kid's slot within its own pool.
 const SLOT = (() => { const c = new Map(); return NAMES.map((_, i) => { const p = poolOf(i), n = c.get(p) || 0; c.set(p, n + 1); return n; }); })();
 NAMES.forEach((n, i) => { if ((SLOT[i] + 1) * TAG_COUNT > poolOf(i).length) throw new Error("Not enough words for " + n); });
-// Each (kid, tag) pair gets its own word; no two pairs share a word.
-function wordFor(kidIndex, tag) {
-  return poolOf(kidIndex)[SLOT[kidIndex] * TAG_COUNT + (tag - 1)];
+// ----- GO code: the TV shows one at START; words depend on it, so scanning early reveals nothing.
+// 3 digits: two random + one check digit (catches typos).
+function goCheck(two) { return hash32(SECRET + "|go|" + two) % 10; }
+function makeGoCode() { const two = String(10 + Math.floor(Math.random() * 90)); return two + goCheck(two); }
+function validGo(code) { return /^[1-9][0-9][0-9]$/.test(code) && goCheck(code.slice(0, 2)) === +code[2]; }
+const _roundPools = new Map();
+function roundPool(pool, round) {
+  const key = pool.length + "|" + pool[0] + "|" + round;
+  if (!_roundPools.has(key)) {
+    const list = pool.slice(), rand = mulberry32(hash32(SECRET + "|round|" + round + "|" + pool[0]));
+    for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+    _roundPools.set(key, list);
+  }
+  return _roundPools.get(key);
+}
+// Each (kid, tag) pair gets its own word for this round; no two pairs share a word.
+function wordFor(kidIndex, tag, round) {
+  return roundPool(poolOf(kidIndex), round)[SLOT[kidIndex] * TAG_COUNT + (tag - 1)];
 }
 // Opaque per-tag link token so kids can't edit the URL to jump to another tag.
 function tokenFor(tag) { return hash32(SECRET + "|tag|" + tag).toString(36).padStart(6, "0").slice(0, 6); }
@@ -117,9 +132,9 @@ function tagFromToken(tok) {
   return null;
 }
 // word -> {kid, tag}
-function buildLookup() {
+function buildLookup(round) {
   const m = new Map();
-  NAMES.forEach((_, k) => { for (let t = 1; t <= TAG_COUNT; t++) m.set(wordFor(k, t), { kid: k, tag: t }); });
+  NAMES.forEach((_, k) => { for (let t = 1; t <= TAG_COUNT; t++) m.set(wordFor(k, t, round), { kid: k, tag: t }); });
   return m;
 }
 function store(key, val) {

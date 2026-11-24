@@ -39,6 +39,8 @@
   .clock { font-size:5vw; margin:-1vh 0 2vh; text-shadow:0 0 14px var(--g); letter-spacing:.08em; }
   .clock.low { color:var(--red); text-shadow:0 0 14px var(--red); animation:blink 1s steps(1) infinite; }
   .clock.idle { color:var(--dim); text-shadow:none; }
+  .go { font-size:2.2vw; color:var(--amber); margin:-1vh 0 2vh; text-shadow:0 0 10px var(--amber); }
+  .go b { font-size:4vw; letter-spacing:.15em; }
   @keyframes flash { 50% { opacity:.35; } }
 </style>
 </head>
@@ -52,6 +54,7 @@
   <section class="board">
     <h1>SCOREBOARD</h1>
     <div id="clock" class="clock">--:--</div>
+    <div id="go" class="go"></div>
     <div id="rows"></div>
   </section>
 </div>
@@ -59,11 +62,12 @@
 
 <script src="config.js"></script>
 <script>
-const LOOKUP = buildLookup();
+let LOOKUP = null;
 const SKEY = "turkeyhunt_tv_" + hash32(SECRET);
-const fresh = () => ({ found: NAMES.map(() => []), lastAt: NAMES.map(() => 0), endAt: 0, over: false });
+const fresh = () => ({ found: NAMES.map(() => []), lastAt: NAMES.map(() => 0), endAt: 0, over: false, go: "" });
 let state = fresh();
-try { const s = JSON.parse(store(SKEY) || "null"); if (s && s.found && s.found.length === NAMES.length && s.lastAt) state = s; } catch (e) {}
+try { const s = JSON.parse(store(SKEY) || "null"); if (s && s.found && s.found.length === NAMES.length && s.lastAt) state = s;
+  if (state.go) LOOKUP = buildLookup(state.go); } catch (e) {}
 function save() { store(SKEY, JSON.stringify(state)); }
 
 const logEl = document.getElementById("log"), input = document.getElementById("in");
@@ -103,6 +107,7 @@ function endGame(reason) {
 
 function tick() {
   const el = document.getElementById("clock");
+  document.getElementById("go").innerHTML = state.go && !state.over ? `GO CODE <b>${state.go}</b>` : "";
   if (!state.endAt) { el.textContent = "READY"; el.className = "clock idle"; return; }
   const left = Math.max(0, state.endAt - Date.now());
   const m = Math.floor(left / 60000), sec = Math.floor(left / 1000) % 60;
@@ -135,11 +140,14 @@ function handle(raw) {
   if (start) {
     if (state.endAt) { log("GAME ALREADY STARTED. RESET FIRST.", "warn"); return; }
     const mins = start[1] ? Math.min(120, Math.max(1, parseInt(start[1], 10))) : GAME_MINUTES;
+    state.go = makeGoCode(); LOOKUP = buildLookup(state.go);
     state.endAt = Date.now() + mins * 60000; save(); tick();
-    log(`>>> GO GO GO! ${mins} MINUTES ON THE CLOCK <<<`, "ok"); return;
+    log(`>>> GO GO GO! ${mins} MINUTES ON THE CLOCK <<<`, "ok");
+    log(`>>> GO CODE: ${state.go} — TYPE IT ON YOUR PHONE <<<`, "warn"); return;
   }
   if (!state.endAt) { log("✋ NOT YET! WAIT FOR THE GO.", "warn"); return; }
   if (state.over) { log("✋ GAME OVER.", "warn"); return; }
+  if (cmd === state.go) { log("THAT'S THE GO CODE. TYPE IT ON YOUR PHONE, NOT HERE!", "warn"); return; }
   const hit = LOOKUP.get(cmd.replace(/ /g, ""));
   if (!hit) { log("✗ ACCESS DENIED", "bad"); return; }
   const name = NAMES[hit.kid].toUpperCase(), list = state.found[hit.kid];

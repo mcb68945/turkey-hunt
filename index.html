@@ -23,6 +23,11 @@
   .hint { color:var(--muted); font-size:1.05rem; }
   .small { margin-top:40px; background:none; color:var(--muted); font-size:.9rem; padding:8px; text-decoration:underline; }
   .err { color:#ff8a7a; }
+  .gobox { display:flex; gap:10px; justify-content:center; margin:16px 0 8px; }
+  .gobox input { width:150px; font:inherit; font-size:2.4rem; font-weight:900; text-align:center; letter-spacing:.2em;
+                 border-radius:14px; border:2px solid var(--accent); background:#120c08; color:var(--ink); padding:8px; }
+  .gobox button { padding:10px 18px; background:var(--accent); color:#1b120c; }
+  .wait { font-size:3rem; margin:10px 0 0; }
 </style>
 </head>
 <body>
@@ -33,6 +38,7 @@ const app = document.getElementById("app");
 const params = new URLSearchParams(location.search);
 const tag = params.has("t") ? tagFromToken(params.get("t")) : null;
 const KEY = "turkeyhunt_kid_" + hash32(SECRET);
+const GOKEY = "turkeyhunt_go_" + hash32(SECRET);
 
 function currentKid() {
   const v = store(KEY);
@@ -66,10 +72,37 @@ function changeKid() {
   showPicker(render);
 }
 
+function goPrompt(name, msg) {
+  el(`<h1>🦃 TURKEY HUNT</h1>
+      <p class="who">You're <b>${name}</b>! ✅</p>
+      <div class="wait">🦃⏳</div>
+      <p class="hint">${msg}</p>
+      <form class="gobox" id="gof"><input id="goin" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="###" autocomplete="off"><button>GO</button></form>
+      <p class="err" id="goerr"></p>
+      <button class="small" id="chg">Not ${name}?</button>`);
+  document.getElementById("chg").onclick = changeKid;
+  document.getElementById("gof").onsubmit = e => {
+    e.preventDefault();
+    const v = document.getElementById("goin").value.trim();
+    if (!validGo(v)) { document.getElementById("goerr").textContent = "That's not the code. Check the TV!"; return; }
+    store(GOKEY, v); render();
+  };
+}
+
+function newGame() {
+  const kid = currentKid();
+  goPrompt(NAMES[kid], "New game? Type the new GO code from the TV.");
+}
+
 function render() {
   const kid = currentKid();
   if (kid === null) { showPicker(render); return; }
   const name = NAMES[kid];
+  const go = store(GOKEY);
+  if (!go || !validGo(go)) {
+    goPrompt(name, "Not yet! When the game starts, a GO code shows on the TV. Type it here.");
+    return;
+  }
   if (params.has("t") && tag === null) {
     el(`<h1>🦃 TURKEY HUNT</h1><p class="err">Hmm, that code didn't work. Try scanning again.</p>`);
     return;
@@ -77,14 +110,16 @@ function render() {
   if (tag === null) {
     el(`<h1>🦃 TURKEY HUNT</h1>
         <p class="who">You're <b>${name}</b>! ✅</p>
-        <p class="hint">Now go find the codes. Scan each one, then type your secret word at the TV.</p>
-        <button class="small" id="chg">Not ${name}?</button>`);
+        <p class="hint">You're in! Go find the codes. Scan each one, then type your secret word at the TV.</p>
+        <button class="small" id="chg">Not ${name}?</button> <button class="small" id="ng">New game code</button>`);
+    document.getElementById("ng").onclick = newGame;
   } else {
     el(`<h1>🦃 TURKEY HUNT</h1>
         <div class="tag">Tag ${tag} · for <b>${name}</b></div>
-        <div class="word">${wordFor(kid, tag)}</div>
+        <div class="word">${wordFor(kid, tag, go)}</div>
         <p class="hint">Run to the TV and type it in! 🤫 Keep it secret.</p>
-        <button class="small" id="chg">Not ${name}?</button>`);
+        <button class="small" id="chg">Not ${name}?</button> <button class="small" id="ng">New game code</button>`);
+    document.getElementById("ng").onclick = newGame;
   }
   document.getElementById("chg").onclick = changeKid;
 }
