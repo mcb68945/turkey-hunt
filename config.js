@@ -8,7 +8,7 @@ const NAMES = ["Jordan", "Jonas", "Noelle", "Nolan", "Isla", "Chris", "Scarlet",
 const SECRET = "gobble-gobble-2026";
 
 // Players who get short, easy words (3-4 letters).
-const SHORT_WORD_KIDS = ["Jonas", "Isla"];
+const SHORT_WORD_KIDS = ["Jonas", "Isla", "Baby Sal"];
 // Players who get long, harder words (7+ letters).
 const LONG_WORD_KIDS = ["Chris", "Jordan", "Noelle", "Nolan"];
 // Players who get a single letter, a single digit, or a two-letter word.
@@ -41,7 +41,9 @@ avocado bamboo banana basket blanket broccoli buffalo burrito noodles moon comet
 
 const SHORT_RAW = `cat dog pig cow hen bug bee fox ant bat yak emu ape cub pup sun moon star sky hat cap bus car van jet
 boat ship cake bun corn pea bean nut toy ball kite drum bell box cup mug pot pan fan bed rug map pen red blue
-pink gold tree leaf rose frog duck fish bear lion deer goat seal crab toad worm sock shoe fork ring snow rain`;
+pink gold tree leaf rose frog duck fish bear lion deer goat seal crab toad worm sock shoe fork ring snow rain
+owl egg jam pie ham dot gum mop nap net pin tag wig web hug zip top tub log jar milk bird nest lamp door barn
+farm sand hill pond rock gift toes nose ears hand hat bowl`;
 
 const LONG_RAW = `avalanche blueberry butterfly caterpillar chocolate crocodile dinosaur elephant fireworks flamingo
 gingerbread grasshopper hamburger helicopter jellyfish kangaroo lemonade marshmallow motorcycle mushroom nutcracker
