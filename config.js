@@ -60,6 +60,14 @@ wolverine xylophone cornucopia drumstick pilgrim mashedpotato applecider pecanpi
 const TINY_RAW = `A B C D E F G H J K L M N P Q R S T U V W X Y Z 1 2 3 4 5 6 7 8 9
 UP GO HI NO ON OK MA PA AM AT BE DO HE IF IN IS IT ME MY OR SO TO US WE BY`;
 
+// Common 4-6 letter words for everyone not in another list.
+const MEDIUM_RAW = `apple banana bread candy cookie cheese cherry chair table house horse mouse puppy kitty tiger zebra
+panda monkey rabbit turkey pizza pasta lemon melon grape peach water juice honey cloud storm beach ocean river
+plant flower garden window pillow jacket shirt pants boots glove scarf crown queen king robot rocket planet magic
+party music piano guitar dance happy funny silly smile heart green purple orange yellow silver pencil paper book
+school friend family turtle spider snake shark whale goose sheep pony train truck plane bike swing slide pumpkin
+gravy`;
+
 // ---------- word + token logic (shared by all pages) ----------
 function hash32(str) {
   let h = 2166136261 >>> 0;
@@ -83,7 +91,7 @@ function wordPool(raw, salt, exclude) {
 const TINY_WORDS = wordPool(TINY_RAW, "|tiny", new Set());
 const SHORT_WORDS = wordPool(SHORT_RAW, "|short", new Set());
 const LONG_WORDS = wordPool(LONG_RAW, "|long", new Set(SHORT_WORDS)).filter(w => w.length >= 7);
-const WORDS = wordPool(WORDS_RAW, "|words", new Set([...SHORT_WORDS, ...LONG_WORDS]));
+const WORDS = wordPool(MEDIUM_RAW, "|medium", new Set([...TINY_WORDS, ...SHORT_WORDS, ...LONG_WORDS])).filter(w => w.length >= 4 && w.length <= 6);
 const idxs = names => new Set(names.map(n => NAMES.indexOf(n)).filter(i => i >= 0));
 const SHORT_SET = idxs(SHORT_WORD_KIDS), LONG_SET = idxs(LONG_WORD_KIDS), TINY_SET = idxs(TINY_WORD_KIDS);
 const poolOf = i => TINY_SET.has(i) ? TINY_WORDS : SHORT_SET.has(i) ? SHORT_WORDS : LONG_SET.has(i) ? LONG_WORDS : WORDS;
