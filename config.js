@@ -9,8 +9,10 @@ const SECRET = "gobble-gobble-2026";
 
 // Players who get short, easy words (3-4 letters).
 const SHORT_WORD_KIDS = ["Jonas", "Isla", "Baby Sal"];
-// Players who get long, harder words (7+ letters).
-const LONG_WORD_KIDS = ["Chris", "Jordan", "Noelle", "Nolan"];
+// Players who get the hardest words (9+ letters).
+const HARD_WORD_KIDS = ["Chris", "Jordan"];
+// Players who get longer, still-familiar words (6-8 letters).
+const LONG_WORD_KIDS = ["Noelle", "Nolan"];
 // Players who get a single letter, a single digit, or a two-letter word.
 const TINY_WORD_KIDS = ["Silas", "Zane"];
 
@@ -54,7 +56,9 @@ dragonfly earthquake firetruck football gorilla hedgehog hurricane iceberg jackr
 mammoth meatball mermaid microphone moonlight notebook ostrich pancake panther parachute peppermint pinecone
 playground quarterback rainstorm rollercoaster sandcastle scorpion seahorse snowman sparkler spaceship squirrel
 stegosaurus tangerine tarantula thanksgiving toothbrush treehouse tumbleweed volleyball warthog wishbone
-wolverine xylophone cornucopia drumstick pilgrim mashedpotato applecider pecanpie hotchocolate wrapping`;
+wolverine xylophone cornucopia drumstick pilgrim mashedpotato applecider pecanpie hotchocolate wrapping
+popcorn blanket cupcake pajamas giraffe penguin dolphin cowboy pirate unicorn rainbow volcano dragon wizard
+cactus muffin waffle pretzel chicken picnic sweater holiday balloon monster castle jungle desert`;
 
 // No I or O (look like 1 and 0).
 const TINY_RAW = `A B C D E F G H J K L M N P Q R S T U V W X Y Z 1 2 3 4 5 6 7 8 9
@@ -90,11 +94,12 @@ function wordPool(raw, salt, exclude) {
 }
 const TINY_WORDS = wordPool(TINY_RAW, "|tiny", new Set());
 const SHORT_WORDS = wordPool(SHORT_RAW, "|short", new Set());
-const LONG_WORDS = wordPool(LONG_RAW, "|long", new Set(SHORT_WORDS)).filter(w => w.length >= 7);
-const WORDS = wordPool(MEDIUM_RAW, "|medium", new Set([...TINY_WORDS, ...SHORT_WORDS, ...LONG_WORDS])).filter(w => w.length >= 4 && w.length <= 6);
+const HARD_WORDS = wordPool(LONG_RAW, "|hard", new Set()).filter(w => w.length >= 9);
+const LONG_WORDS = wordPool(LONG_RAW, "|long", new Set(SHORT_WORDS)).filter(w => w.length >= 6 && w.length <= 8);
+const WORDS = wordPool(MEDIUM_RAW, "|medium", new Set([...TINY_WORDS, ...SHORT_WORDS, ...LONG_WORDS, ...HARD_WORDS])).filter(w => w.length >= 4 && w.length <= 6);
 const idxs = names => new Set(names.map(n => NAMES.indexOf(n)).filter(i => i >= 0));
-const SHORT_SET = idxs(SHORT_WORD_KIDS), LONG_SET = idxs(LONG_WORD_KIDS), TINY_SET = idxs(TINY_WORD_KIDS);
-const poolOf = i => TINY_SET.has(i) ? TINY_WORDS : SHORT_SET.has(i) ? SHORT_WORDS : LONG_SET.has(i) ? LONG_WORDS : WORDS;
+const SHORT_SET = idxs(SHORT_WORD_KIDS), LONG_SET = idxs(LONG_WORD_KIDS), HARD_SET = idxs(HARD_WORD_KIDS), TINY_SET = idxs(TINY_WORD_KIDS);
+const poolOf = i => HARD_SET.has(i) ? HARD_WORDS : TINY_SET.has(i) ? TINY_WORDS : SHORT_SET.has(i) ? SHORT_WORDS : LONG_SET.has(i) ? LONG_WORDS : WORDS;
 // Each kid's slot within its own pool.
 const SLOT = (() => { const c = new Map(); return NAMES.map((_, i) => { const p = poolOf(i), n = c.get(p) || 0; c.set(p, n + 1); return n; }); })();
 NAMES.forEach((n, i) => { if ((SLOT[i] + 1) * TAG_COUNT > poolOf(i).length) throw new Error("Not enough words for " + n); });
