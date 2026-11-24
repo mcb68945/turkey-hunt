@@ -16,6 +16,9 @@ const LONG_WORD_KIDS = ["Noelle", "Nolan"];
 // Players who get a single letter, a single digit, or a two-letter word.
 const TINY_WORD_KIDS = ["Silas", "Zane"];
 
+// Default game length in minutes (host can type START 20 to override).
+const GAME_MINUTES = 25;
+
 // Number of hidden tags.
 const TAG_COUNT = 25;
 
