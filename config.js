@@ -7,6 +7,9 @@ const NAMES = ["Jordan", "Jonas", "Noelle", "Nolan", "Isla", "Chris", "Scarlet",
 // Changing it after printing breaks the printed codes.
 const SECRET = "gobble-gobble-2026";
 
+// Players who get short, easy words (3-4 letters).
+const SHORT_WORD_KIDS = ["Jonas", "Isla"];
+
 // Number of hidden tags.
 const TAG_COUNT = 25;
 
@@ -32,6 +35,10 @@ mustard nugget oatmeal octopus onion oyster pajamas parsnip pelican pillow popsi
 sandal sprinkle stuffing sundae teapot thunder tractor trumpet tugboat walnut weasel wombat zucchini acrobat
 avocado bamboo banana basket blanket broccoli buffalo burrito noodles moon comet2`;
 
+const SHORT_RAW = `cat dog pig cow hen bug bee fox ant bat yak emu ape cub pup sun moon star sky hat cap bus car van jet
+boat ship cake bun corn pea bean nut toy ball kite drum bell box cup mug pot pan fan bed rug map pen red blue
+pink gold tree leaf rose frog duck fish bear lion deer goat seal crab toad worm sock shoe fork ring snow rain`;
+
 // ---------- word + token logic (shared by all pages) ----------
 function hash32(str) {
   let h = 2166136261 >>> 0;
@@ -46,17 +53,25 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const WORDS = (() => {
-  const list = [...new Set(WORDS_RAW.split(/\s+/).map(w => w.trim().toUpperCase()).filter(w => /^[A-Z]+$/.test(w)))];
-  const rand = mulberry32(hash32(SECRET + "|words"));
+function wordPool(raw, salt, exclude) {
+  const list = [...new Set(raw.split(/\s+/).map(w => w.trim().toUpperCase()).filter(w => /^[A-Z]+$/.test(w) && !exclude.has(w)))];
+  const rand = mulberry32(hash32(SECRET + salt));
   for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
   return list;
-})();
-if (WORDS.length < NAMES.length * TAG_COUNT) {
-  throw new Error("Not enough words: need " + NAMES.length * TAG_COUNT + ", have " + WORDS.length);
+}
+const SHORT_WORDS = wordPool(SHORT_RAW, "|short", new Set());
+const WORDS = wordPool(WORDS_RAW, "|words", new Set(SHORT_WORDS));
+const SHORT_SET = new Set(SHORT_WORD_KIDS.map(n => NAMES.indexOf(n)).filter(i => i >= 0));
+// Each kid's slot within its own pool.
+const SLOT = (() => { let s = 0, l = 0; return NAMES.map((_, i) => SHORT_SET.has(i) ? s++ : l++); })();
+if (SHORT_WORDS.length < SHORT_SET.size * TAG_COUNT || WORDS.length < (NAMES.length - SHORT_SET.size) * TAG_COUNT) {
+  throw new Error("Not enough words for " + NAMES.length + " players");
 }
 // Each (kid, tag) pair gets its own word; no two pairs share a word.
-function wordFor(kidIndex, tag) { return WORDS[kidIndex * TAG_COUNT + (tag - 1)]; }
+function wordFor(kidIndex, tag) {
+  const pool = SHORT_SET.has(kidIndex) ? SHORT_WORDS : WORDS;
+  return pool[SLOT[kidIndex] * TAG_COUNT + (tag - 1)];
+}
 // Opaque per-tag link token so kids can't edit the URL to jump to another tag.
 function tokenFor(tag) { return hash32(SECRET + "|tag|" + tag).toString(36).padStart(6, "0").slice(0, 6); }
 function tagFromToken(tok) {
